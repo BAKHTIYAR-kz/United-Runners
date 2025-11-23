@@ -8,25 +8,37 @@ import {
   ChartBarIcon, 
   CalculatorIcon, 
   CalendarDaysIcon, 
-  NewspaperIcon, 
-  InformationCircleIcon,
+  FlagIcon,
   BoltIcon,
   TrophyIcon,
+  MapPinIcon,
+  FireIcon,
+  UserGroupIcon,
+  CheckBadgeIcon
 } from '@heroicons/react/24/outline';
 import { generateTrainingPlan } from './services/gemini';
 
 // --- Types ---
 
-type View = 'profile' | 'stats' | 'calculator' | 'plan' | 'news' | 'info';
+type View = 'profile' | 'stats' | 'calculator' | 'plan' | 'races';
 
 interface UserStats {
   height: number; // cm
   weight: number; // kg
+  club: string;
+  stravaConnected: boolean;
   distance: {
     year: number;
     month: number;
     week: number;
     day: number;
+  };
+  records: {
+    k5: string;
+    k10: string;
+    k21: string;
+    k42: string;
+    maxDistance: number;
   };
 }
 
@@ -58,10 +70,14 @@ const NavButton = ({
 interface CardProps {
   children?: React.ReactNode;
   className?: string;
+  onClick?: () => void;
 }
 
-const Card: React.FC<CardProps> = ({ children, className = '' }) => (
-  <div className={`bg-zinc-900/50 backdrop-blur-md border border-white/5 rounded-2xl p-6 ${className}`}>
+const Card: React.FC<CardProps> = ({ children, className = '', onClick }) => (
+  <div 
+    onClick={onClick}
+    className={`bg-zinc-900/50 backdrop-blur-md border border-white/5 rounded-2xl p-6 ${className}`}
+  >
     {children}
   </div>
 );
@@ -83,23 +99,103 @@ const ProfileView = () => {
   const [stats, setStats] = useState<UserStats>({
     height: 178,
     weight: 72,
+    club: "I Love Running Almaty",
+    stravaConnected: true,
     distance: {
       year: 1240.5,
       month: 128.4,
       week: 32.2,
       day: 5.0,
+    },
+    records: {
+      k5: "22:15",
+      k10: "48:30",
+      k21: "1:45:10",
+      k42: "3:55:00",
+      maxDistance: 42.2
     }
   });
 
+  const clubs = [
+    "I Love Running Almaty",
+    "Astana Runners",
+    "Almaty Marathon Club",
+    "Extremal",
+    "Без клуба"
+  ];
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight">Профиль</h2>
-          <p className="text-zinc-400">Ваши физические данные и прогресс.</p>
+          <p className="text-zinc-400">Ваши данные и рекорды.</p>
         </div>
         <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
           <UserIcon className="w-6 h-6" />
+        </div>
+      </div>
+
+      {/* Strava Integration Box */}
+      <div className="border border-orange-500/30 bg-orange-500/10 rounded-xl p-4 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-orange-500 rounded text-white font-bold flex items-center justify-center text-xs">S</div>
+            <div>
+                <div className="text-sm font-bold text-orange-100">STRAVA</div>
+                <div className="text-xs text-orange-200/60">{stats.stravaConnected ? 'Синхронизировано' : 'Не подключено'}</div>
+            </div>
+        </div>
+        <button 
+            onClick={() => setStats({...stats, stravaConnected: !stats.stravaConnected})}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${stats.stravaConnected ? 'bg-orange-500 text-white border-orange-500' : 'border-orange-500/50 text-orange-500'}`}
+        >
+            {stats.stravaConnected ? <CheckBadgeIcon className="w-4 h-4" /> : 'Подключить'}
+        </button>
+      </div>
+
+      {/* Club Selection */}
+      <Card>
+        <div className="flex justify-between items-center mb-2">
+             <span className="text-zinc-500 text-sm uppercase tracking-wider">Беговой Клуб</span>
+             <UserGroupIcon className="w-4 h-4 text-blue-500" />
+        </div>
+        <select 
+            value={stats.club}
+            onChange={(e) => setStats({...stats, club: e.target.value})}
+            className="w-full bg-zinc-800 border-none text-white text-lg font-medium rounded focus:ring-1 focus:ring-blue-500 py-2 -ml-1 cursor-pointer"
+        >
+            {clubs.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </Card>
+
+      {/* Records Grid */}
+      <h3 className="text-lg font-semibold text-white mt-8 mb-2 flex items-center gap-2">
+        <TrophyIcon className="w-5 h-5 text-yellow-500" />
+        Личные Рекорды
+      </h3>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="bg-zinc-800/40 border border-zinc-700 rounded-xl p-4">
+             <div className="text-xs text-zinc-500 mb-1">5 км</div>
+             <div className="text-xl font-mono text-white">{stats.records.k5}</div>
+        </div>
+        <div className="bg-zinc-800/40 border border-zinc-700 rounded-xl p-4">
+             <div className="text-xs text-zinc-500 mb-1">10 км</div>
+             <div className="text-xl font-mono text-white">{stats.records.k10}</div>
+        </div>
+        <div className="bg-zinc-800/40 border border-zinc-700 rounded-xl p-4">
+             <div className="text-xs text-zinc-500 mb-1">21.1 км</div>
+             <div className="text-xl font-mono text-white">{stats.records.k21}</div>
+        </div>
+        <div className="bg-zinc-800/40 border border-zinc-700 rounded-xl p-4">
+             <div className="text-xs text-zinc-500 mb-1">42.2 км</div>
+             <div className="text-xl font-mono text-white">{stats.records.k42}</div>
+        </div>
+        <div className="col-span-2 md:col-span-2 bg-gradient-to-r from-zinc-800/40 to-emerald-900/20 border border-zinc-700 rounded-xl p-4 flex justify-between items-center">
+             <div>
+                <div className="text-xs text-emerald-400 mb-1 uppercase tracking-wider">Максимальный забег</div>
+                <div className="text-xl font-mono text-white">{stats.records.maxDistance} км</div>
+             </div>
+             <FireIcon className="w-8 h-8 text-emerald-600/50" />
         </div>
       </div>
 
@@ -136,7 +232,7 @@ const ProfileView = () => {
         </Card>
       </div>
 
-      <h3 className="text-lg font-semibold text-white mt-8 mb-4">Журнал Дистанции</h3>
+      <h3 className="text-lg font-semibold text-white mt-8 mb-4">Общий километраж</h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="hover:bg-zinc-800/50 transition-colors">
           <StatBox label="Сегодня" value={stats.distance.day} unit="км" />
@@ -156,37 +252,64 @@ const ProfileView = () => {
 };
 
 const LeaderboardView = () => {
+  const [filter, setFilter] = useState<'all' | 'club' | 'challenge'>('all');
+
   const participants = [
-    { rank: 1, name: "Саша М.", distance: "42.2 км", time: "3:15:20", status: "Finished" },
-    { rank: 2, name: "Игорь Т.", distance: "42.2 км", time: "3:22:15", status: "Finished" },
-    { rank: 3, name: "Вы", distance: "35.0 км", time: "2:45:00", status: "Running", active: true },
-    { rank: 4, name: "Алексей Р.", distance: "34.5 км", time: "2:48:30", status: "Running" },
-    { rank: 5, name: "Елена В.", distance: "32.0 км", time: "2:50:10", status: "Running" },
+    { rank: 1, name: "Саша М.", club: "Astana Runners", distance: "42.2 км", time: "3:15:20", status: "Finished", type: 'all' },
+    { rank: 2, name: "Игорь Т.", club: "I Love Running", distance: "42.2 км", time: "3:22:15", status: "Finished", type: 'all' },
+    { rank: 3, name: "Вы", club: "I Love Running", distance: "35.0 км", time: "2:45:00", status: "Running", active: true, type: 'all' },
+    { rank: 1, name: "Вы", club: "I Love Running", distance: "128.4 км", time: "-", status: "Month Leader", active: true, type: 'club' },
+    { rank: 2, name: "Марина К.", club: "I Love Running", distance: "115.0 км", time: "-", status: "Chaser", type: 'club' },
+    { rank: 1, name: "Олег П.", club: "Extremal", distance: "200.0 км", time: "-", status: "Ultra Beast", type: 'challenge' },
+    { rank: 4, name: "Вы", club: "I Love Running", distance: "128.4 км", time: "-", status: "Challenger", active: true, type: 'challenge' },
   ];
+
+  const filteredList = participants.filter(p => p.type === 'all' || p.type === filter).filter(p => filter === 'all' ? p.type === 'all' : true).sort((a,b) => a.rank - b.rank);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-       <div className="flex items-center justify-between mb-8">
+       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight">Рейтинг</h2>
-          <p className="text-zinc-400">Прямой эфир забега.</p>
+          <p className="text-zinc-400">Соревнуйтесь с лучшими.</p>
         </div>
         <div className="w-12 h-12 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500">
           <TrophyIcon className="w-6 h-6" />
         </div>
       </div>
 
+      {/* Filter Tabs */}
+      <div className="flex p-1 bg-zinc-900 rounded-xl mb-6 border border-zinc-800">
+        <button 
+            onClick={() => setFilter('all')}
+            className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-lg transition-all ${filter === 'all' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
+        >
+            Общий
+        </button>
+        <button 
+            onClick={() => setFilter('club')}
+            className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-lg transition-all ${filter === 'club' ? 'bg-blue-600 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
+        >
+            Клубный
+        </button>
+        <button 
+            onClick={() => setFilter('challenge')}
+            className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-lg transition-all ${filter === 'challenge' ? 'bg-orange-600 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
+        >
+            Челленджи
+        </button>
+      </div>
+
       <div className="rounded-2xl border border-zinc-800 overflow-hidden bg-zinc-900/30 backdrop-blur-sm">
         <div className="grid grid-cols-12 gap-4 p-4 text-xs font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
           <div className="col-span-2 text-center">#</div>
-          <div className="col-span-4">Атлет</div>
-          <div className="col-span-3 text-right">Дист.</div>
-          <div className="col-span-3 text-right">Время</div>
+          <div className="col-span-5">Атлет / Клуб</div>
+          <div className="col-span-5 text-right">Результат</div>
         </div>
         <div className="divide-y divide-zinc-800/50">
-          {participants.map((p) => (
+          {filteredList.map((p, idx) => (
             <div 
-              key={p.rank} 
+              key={idx} 
               className={`grid grid-cols-12 gap-4 p-4 items-center transition-colors ${p.active ? 'bg-emerald-900/20' : 'hover:bg-zinc-800/30'}`}
             >
               <div className="col-span-2 flex justify-center">
@@ -199,14 +322,24 @@ const LeaderboardView = () => {
                   {p.rank}
                 </span>
               </div>
-              <div className="col-span-4 font-medium text-white flex items-center space-x-2">
-                <span className="truncate">{p.name}</span>
-                {p.active && <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shrink-0"></span>}
+              <div className="col-span-5 font-medium text-white">
+                <div className="flex items-center space-x-2">
+                    <span className="truncate">{p.name}</span>
+                    {p.active && <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shrink-0"></span>}
+                </div>
+                <div className="text-[10px] text-zinc-500 truncate">{p.club}</div>
               </div>
-              <div className="col-span-3 text-right font-mono text-zinc-300 truncate">{p.distance}</div>
-              <div className="col-span-3 text-right font-mono text-zinc-400 text-xs sm:text-sm truncate">{p.time}</div>
+              <div className="col-span-5 text-right">
+                  <div className="font-mono text-zinc-300 truncate">{p.distance}</div>
+                  {p.time !== "-" && <div className="font-mono text-zinc-500 text-xs">{p.time}</div>}
+              </div>
             </div>
           ))}
+          {filteredList.length === 0 && (
+              <div className="p-8 text-center text-zinc-500 text-sm">
+                  Нет данных в этой категории
+              </div>
+          )}
         </div>
       </div>
     </div>
@@ -268,8 +401,8 @@ const CalculatorView = () => {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl mx-auto w-full">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">Универсальный Калькулятор</h2>
-          <p className="text-zinc-400">Расчет темпа и прогнозирование результатов.</p>
+          <h2 className="text-3xl font-bold text-white tracking-tight">Калькулятор</h2>
+          <p className="text-zinc-400">Расчет темпа и прогноз.</p>
         </div>
         <div className="w-12 h-12 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
           <CalculatorIcon className="w-6 h-6" />
@@ -364,7 +497,6 @@ const CalculatorView = () => {
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
                     {commonDistances.map((d, i) => {
-                         // Only show calculation if the calculated time is reasonable (e.g., less than 24 hours for simplicity, though ultra runners run longer)
                          const predictedSeconds = d.km * paceDecimal * 60;
                          return (
                             <tr key={i} className="hover:bg-zinc-800/30 transition-colors">
@@ -382,6 +514,7 @@ const CalculatorView = () => {
 };
 
 const PlanView = () => {
+  const [tab, setTab] = useState<'ai' | 'gpp' | 'drills'>('ai');
   const [generatedPlan, setGeneratedPlan] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [level, setLevel] = useState('Любитель');
@@ -394,149 +527,209 @@ const PlanView = () => {
     setIsLoading(false);
   };
 
+  const drills = [
+      { name: "Бег с высоким подниманием бедра", desc: "Корпус прямой, высокая частота, акцент на подъем." },
+      { name: "Захлест голени", desc: "Пятки касаются ягодиц, колени смотрят вниз." },
+      { name: "Многоскоки (Олений бег)", desc: "Мощное отталкивание и фаза полета." },
+      { name: "Семенящий бег", desc: "Мелкие шаги с расслабленной стопой и высокой частотой." }
+  ];
+
+  const gpp = [
+      { name: "Планка", sets: "3 x 45 сек", desc: "Укрепление кора." },
+      { name: "Выпады", sets: "3 x 15 (на ногу)", desc: "Сила квадрицепсов и ягодиц." },
+      { name: "Подъемы на носки", sets: "3 x 20", desc: "Укрепление икр и ахилла." },
+      { name: "Берпи", sets: "3 x 12", desc: "Общая выносливость и взрывная сила." },
+      { name: "Русский твист", sets: "3 x 30", desc: "Косые мышцы пресса." }
+  ];
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight">Тренировки</h2>
-          <p className="text-zinc-400">Индивидуальный план от AI.</p>
+          <p className="text-zinc-400">План, ОФП и СБУ.</p>
         </div>
         <div className="w-12 h-12 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-500">
           <CalendarDaysIcon className="w-6 h-6" />
         </div>
       </div>
 
-      {!generatedPlan && !isLoading && (
-        <Card className="border-dashed border-2 border-zinc-800 !bg-transparent">
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm text-zinc-400 block mb-2">Ваш уровень</label>
-              <select 
-                value={level} 
-                onChange={(e) => setLevel(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-white focus:outline-none focus:border-purple-500"
-              >
-                <option value="Новичок">Новичок</option>
-                <option value="Любитель">Любитель</option>
-                <option value="Продвинутый">Продвинутый</option>
-                <option value="Элита">Элита</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-sm text-zinc-400 block mb-2">Главная цель</label>
-              <input 
-                type="text" 
-                value={goal} 
-                onChange={(e) => setGoal(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-white focus:outline-none focus:border-purple-500"
-                placeholder="Например: 10 км быстрее 50 минут"
-              />
-            </div>
-            <button 
-              onClick={handleGenerate}
-              className="w-full bg-white text-black font-bold py-4 rounded-lg hover:bg-zinc-200 transition-colors flex items-center justify-center space-x-2"
-            >
-              <BoltIcon className="w-5 h-5" />
-              <span>Создать План (AI)</span>
-            </button>
+       {/* Training Tabs */}
+       <div className="flex p-1 bg-zinc-900 rounded-xl mb-6 border border-zinc-800">
+        <button 
+            onClick={() => setTab('ai')}
+            className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-lg transition-all ${tab === 'ai' ? 'bg-purple-600 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
+        >
+            AI План
+        </button>
+        <button 
+            onClick={() => setTab('gpp')}
+            className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-lg transition-all ${tab === 'gpp' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
+        >
+            ОФП (Сила)
+        </button>
+        <button 
+            onClick={() => setTab('drills')}
+            className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-lg transition-all ${tab === 'drills' ? 'bg-zinc-700 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
+        >
+            СБУ (Техника)
+        </button>
+      </div>
+
+      {tab === 'ai' && (
+        <>
+            {!generatedPlan && !isLoading && (
+                <Card className="border-dashed border-2 border-zinc-800 !bg-transparent">
+                <div className="space-y-4">
+                    <div>
+                    <label className="text-sm text-zinc-400 block mb-2">Ваш уровень</label>
+                    <select 
+                        value={level} 
+                        onChange={(e) => setLevel(e.target.value)}
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-white focus:outline-none focus:border-purple-500"
+                    >
+                        <option value="Новичок">Новичок</option>
+                        <option value="Любитель">Любитель</option>
+                        <option value="Продвинутый">Продвинутый</option>
+                        <option value="Элита">Элита</option>
+                    </select>
+                    </div>
+                    <div>
+                    <label className="text-sm text-zinc-400 block mb-2">Главная цель</label>
+                    <input 
+                        type="text" 
+                        value={goal} 
+                        onChange={(e) => setGoal(e.target.value)}
+                        className="w-full bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-white focus:outline-none focus:border-purple-500"
+                        placeholder="Например: 10 км быстрее 50 минут"
+                    />
+                    </div>
+                    <button 
+                    onClick={handleGenerate}
+                    className="w-full bg-white text-black font-bold py-4 rounded-lg hover:bg-zinc-200 transition-colors flex items-center justify-center space-x-2"
+                    >
+                    <BoltIcon className="w-5 h-5" />
+                    <span>Создать План (AI)</span>
+                    </button>
+                </div>
+                </Card>
+            )}
+
+            {isLoading && (
+                <div className="flex flex-col items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-zinc-500 animate-pulse">Тренер составляет программу...</p>
+                </div>
+            )}
+
+            {generatedPlan && (
+                <div className="space-y-4">
+                <div 
+                    className="prose prose-invert prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: generatedPlan }} 
+                />
+                <button 
+                    onClick={() => setGeneratedPlan(null)}
+                    className="text-sm text-zinc-500 underline decoration-zinc-700 hover:text-zinc-300"
+                >
+                    Создать новый план
+                </button>
+                </div>
+            )}
+        </>
+      )}
+
+      {tab === 'gpp' && (
+          <div className="grid gap-3">
+              {gpp.map((ex, i) => (
+                  <div key={i} className="bg-zinc-800/40 p-4 rounded-xl border border-zinc-700/50 flex justify-between items-center">
+                      <div>
+                          <div className="font-semibold text-white">{ex.name}</div>
+                          <div className="text-xs text-zinc-400">{ex.desc}</div>
+                      </div>
+                      <div className="bg-zinc-900 px-3 py-1 rounded text-emerald-400 font-mono text-sm border border-zinc-700">
+                          {ex.sets}
+                      </div>
+                  </div>
+              ))}
           </div>
-        </Card>
       )}
 
-      {isLoading && (
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-zinc-500 animate-pulse">Тренер составляет программу...</p>
-        </div>
+      {tab === 'drills' && (
+          <div className="grid gap-3">
+              {drills.map((drill, i) => (
+                  <div key={i} className="bg-zinc-800/40 p-4 rounded-xl border border-zinc-700/50">
+                      <div className="font-semibold text-white mb-1">{drill.name}</div>
+                      <div className="text-sm text-zinc-400 leading-snug">{drill.desc}</div>
+                  </div>
+              ))}
+              <div className="p-4 bg-blue-900/10 border border-blue-900/30 rounded-xl text-xs text-blue-200 mt-4">
+                  Совет: Выполняйте СБУ перед основной скоростной работой или после легкого кросса, 2-3 раза в неделю. Дистанция каждого упражнения 30-50 метров.
+              </div>
+          </div>
       )}
 
-      {generatedPlan && (
-        <div className="space-y-4">
-           <div 
-             className="prose prose-invert prose-sm max-w-none"
-             dangerouslySetInnerHTML={{ __html: generatedPlan }} 
-           />
-           <button 
-             onClick={() => setGeneratedPlan(null)}
-             className="text-sm text-zinc-500 underline decoration-zinc-700 hover:text-zinc-300"
-           >
-             Создать новый план
-           </button>
-        </div>
-      )}
     </div>
   );
 };
 
-const NewsView = () => {
-  const news = [
-    { id: 1, title: "Breaking 2: Наука о новых кроссовках", source: "Runner's World", time: "2ч", image: "bg-orange-500" },
-    { id: 2, title: "Регистрация на Московский Марафон", source: "City News", time: "5ч", image: "bg-blue-500" },
-    { id: 3, title: "Питание перед длинной дистанцией", source: "Health Daily", time: "1д", image: "bg-green-500" },
-    { id: 4, title: "Обзор беспроводных наушников", source: "TechRun", time: "1д", image: "bg-zinc-700" },
+const RacesView = () => {
+  const races = [
+    { id: 1, title: "Алматы Марафон", date: "29 Сентября 2024", loc: "Алматы", dist: "10k, 21k, 42k", image: "bg-gradient-to-br from-green-500 to-emerald-700" },
+    { id: 2, title: "Astana Marathon", date: "08 Сентября 2024", loc: "Астана", dist: "10k, 42k", image: "bg-gradient-to-br from-blue-400 to-blue-600" },
+    { id: 3, title: "Tengri Ultra", date: "Май 2025", loc: "Или, Алматинская обл.", dist: "15k, 35k, 70k", image: "bg-gradient-to-br from-orange-500 to-red-600" },
+    { id: 4, title: "Irbis Race", date: "Август 2025", loc: "Заилийский Алатау", dist: "21k, 42k, Skyrace", image: "bg-gradient-to-br from-zinc-600 to-zinc-800" },
+    { id: 5, title: "Turkistan Marathon", date: "Октябрь 2024", loc: "Туркестан", dist: "10k, 21k, 42k", image: "bg-gradient-to-br from-cyan-500 to-blue-500" },
   ];
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-       <div className="flex items-center justify-between mb-8">
+       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">Новости</h2>
-          <p className="text-zinc-400">Мир бега.</p>
+          <h2 className="text-3xl font-bold text-white tracking-tight">Забеги</h2>
+          <p className="text-zinc-400">Календарь стартов Казахстана.</p>
         </div>
-        <div className="w-12 h-12 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500">
-          <NewspaperIcon className="w-6 h-6" />
+        <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500">
+          <FlagIcon className="w-6 h-6" />
         </div>
       </div>
 
       <div className="grid gap-4">
-        {news.map(item => (
-          <Card key={item.id} className="group hover:bg-zinc-800/80 transition-all cursor-pointer">
-            <div className="flex items-center space-x-4">
-              <div className={`w-16 h-16 rounded-lg ${item.image} shrink-0 opacity-80 group-hover:opacity-100 transition-opacity`}></div>
-              <div>
-                <h3 className="font-semibold text-zinc-200 group-hover:text-white mb-1 leading-snug">{item.title}</h3>
-                <div className="flex items-center space-x-2 text-xs text-zinc-500">
-                  <span>{item.source}</span>
-                  <span className="w-1 h-1 bg-zinc-700 rounded-full"></span>
-                  <span>{item.time}</span>
+        {races.map(item => (
+          <Card key={item.id} className="group hover:bg-zinc-800/80 transition-all cursor-pointer relative overflow-hidden">
+             {/* Decorative colored bar */}
+             <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${item.image}`}></div>
+             
+             <div className="flex justify-between items-start pl-3">
+                <div>
+                    <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
+                    <div className="flex flex-col space-y-1 text-sm text-zinc-400">
+                        <div className="flex items-center space-x-2">
+                            <CalendarDaysIcon className="w-4 h-4 text-zinc-500" />
+                            <span>{item.date}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <MapPinIcon className="w-4 h-4 text-zinc-500" />
+                            <span>{item.loc}</span>
+                        </div>
+                    </div>
                 </div>
-              </div>
-            </div>
+                <div className="text-right">
+                    <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Дистанции</div>
+                    <div className="font-mono text-emerald-400 bg-emerald-900/20 px-2 py-1 rounded inline-block text-sm border border-emerald-900/50">
+                        {item.dist}
+                    </div>
+                    <button className="mt-4 block w-full text-xs bg-white text-black font-bold py-2 px-4 rounded hover:bg-zinc-200 transition-colors">
+                        Регистрация
+                    </button>
+                </div>
+             </div>
           </Card>
         ))}
       </div>
     </div>
   );
 };
-
-const InfoView = () => (
-  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-    <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-3xl font-bold text-white tracking-tight">Инфо</h2>
-          <p className="text-zinc-400">О приложении.</p>
-        </div>
-        <div className="w-12 h-12 rounded-full bg-zinc-500/10 border border-zinc-500/20 flex items-center justify-center text-zinc-400">
-          <InformationCircleIcon className="w-6 h-6" />
-        </div>
-      </div>
-    
-    <Card>
-      <h3 className="text-lg font-semibold text-white mb-4">О UNITED RUNNERS</h3>
-      <p className="text-zinc-400 leading-relaxed text-sm mb-4">
-        UNITED RUNNERS — это концептуальное приложение для современного бегуна, который ценит эстетику так же высоко, как и результаты.
-        Создано с использованием React, Tailwind CSS и Gemini AI.
-      </p>
-      <div className="border-t border-zinc-800 pt-4 mt-4">
-        <h4 className="text-sm font-medium text-white mb-2">Технологии</h4>
-        <ul className="text-xs text-zinc-500 space-y-1">
-          <li>Design: Minimalist Dark Mode</li>
-          <li>AI Engine: Google Gemini 2.5 Flash</li>
-        </ul>
-      </div>
-    </Card>
-  </div>
-);
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<View>('profile');
@@ -559,8 +752,7 @@ const App: React.FC = () => {
             { id: 'stats', label: 'Рейтинг', icon: ChartBarIcon },
             { id: 'calculator', label: 'Калькулятор', icon: CalculatorIcon },
             { id: 'plan', label: 'Тренировки', icon: CalendarDaysIcon },
-            { id: 'news', label: 'Новости', icon: NewspaperIcon },
-            { id: 'info', label: 'Инфо', icon: InformationCircleIcon },
+            { id: 'races', label: 'Забеги', icon: FlagIcon },
           ].map((item) => (
              <button
                 key={item.id}
@@ -579,7 +771,7 @@ const App: React.FC = () => {
         </nav>
 
         <div className="text-xs text-zinc-600 font-mono">
-            v2.0.0 Stable
+            v2.1.0 KZ Edition
         </div>
       </aside>
 
@@ -597,8 +789,7 @@ const App: React.FC = () => {
             {activeTab === 'stats' && <LeaderboardView />}
             {activeTab === 'calculator' && <CalculatorView />}
             {activeTab === 'plan' && <PlanView />}
-            {activeTab === 'news' && <NewsView />}
-            {activeTab === 'info' && <InfoView />}
+            {activeTab === 'races' && <RacesView />}
         </div>
 
         {/* Mobile Bottom Navigation */}
@@ -608,7 +799,7 @@ const App: React.FC = () => {
                 <NavButton active={activeTab === 'stats'} onClick={() => setActiveTab('stats')} icon={ChartBarIcon} label="Рейтинг" />
                 <NavButton active={activeTab === 'calculator'} onClick={() => setActiveTab('calculator')} icon={CalculatorIcon} label="Темп" />
                 <NavButton active={activeTab === 'plan'} onClick={() => setActiveTab('plan')} icon={CalendarDaysIcon} label="План" />
-                <NavButton active={activeTab === 'news'} onClick={() => setActiveTab('news')} icon={NewspaperIcon} label="Новости" />
+                <NavButton active={activeTab === 'races'} onClick={() => setActiveTab('races')} icon={FlagIcon} label="Забеги" />
             </div>
         </div>
       </main>
