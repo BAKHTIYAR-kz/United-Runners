@@ -1,0 +1,7 @@
+{
+  "name": "UNITED RUNNERS",
+  "description": "",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
