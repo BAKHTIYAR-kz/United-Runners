@@ -1,8 +1,9 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   UserIcon, 
   ChartBarIcon, 
@@ -14,13 +15,19 @@ import {
   MapPinIcon,
   FireIcon,
   UserGroupIcon,
-  CheckBadgeIcon
+  CheckBadgeIcon,
+  PlusCircleIcon,
+  PlayCircleIcon,
+  FunnelIcon,
+  ChatBubbleLeftRightIcon,
+  MagnifyingGlassIcon,
+  PaperAirplaneIcon
 } from '@heroicons/react/24/outline';
 import { generateTrainingPlan } from './services/gemini';
 
 // --- Types ---
 
-type View = 'profile' | 'stats' | 'calculator' | 'plan' | 'races';
+type View = 'profile' | 'club' | 'chat' | 'stats' | 'calculator' | 'plan' | 'races';
 
 interface UserStats {
   height: number; // cm
@@ -40,6 +47,24 @@ interface UserStats {
     k42: string;
     maxDistance: number;
   };
+}
+
+interface Club {
+    id: string;
+    name: string;
+    desc: string;
+    city: string;
+    members: number;
+    color: string;
+}
+
+interface Message {
+    id: number;
+    user: string;
+    text: string;
+    time: string;
+    isMe: boolean;
+    role?: string;
 }
 
 // --- Components ---
@@ -95,41 +120,13 @@ const StatBox = ({ label, value, unit, trend }: { label: string; value: string |
 
 // --- Views ---
 
-const ProfileView = () => {
-  const [stats, setStats] = useState<UserStats>({
-    height: 178,
-    weight: 72,
-    club: "I Love Running Almaty",
-    stravaConnected: true,
-    distance: {
-      year: 1240.5,
-      month: 128.4,
-      week: 32.2,
-      day: 5.0,
-    },
-    records: {
-      k5: "22:15",
-      k10: "48:30",
-      k21: "1:45:10",
-      k42: "3:55:00",
-      maxDistance: 42.2
-    }
-  });
-
-  const clubs = [
-    "I Love Running Almaty",
-    "Astana Runners",
-    "Almaty Marathon Club",
-    "Extremal",
-    "Без клуба"
-  ];
-
+const ProfileView = ({ stats, setStats }: { stats: UserStats, setStats: any }) => {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-3xl font-bold text-white tracking-tight">Профиль</h2>
-          <p className="text-zinc-400">Ваши данные и рекорды.</p>
+          <p className="text-zinc-400">Ваши данные и прогресс.</p>
         </div>
         <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
           <UserIcon className="w-6 h-6" />
@@ -153,20 +150,33 @@ const ProfileView = () => {
         </button>
       </div>
 
-      {/* Club Selection */}
-      <Card>
-        <div className="flex justify-between items-center mb-2">
-             <span className="text-zinc-500 text-sm uppercase tracking-wider">Беговой Клуб</span>
-             <UserGroupIcon className="w-4 h-4 text-blue-500" />
+      {/* Current Club Display */}
+      <Card className="border-l-4 border-l-blue-500">
+        <div className="flex justify-between items-center">
+            <div>
+                <div className="text-zinc-500 text-xs uppercase tracking-wider mb-1">Мой клуб</div>
+                <div className="text-xl font-bold text-white">{stats.club}</div>
+            </div>
+            <UserGroupIcon className="w-6 h-6 text-blue-500 opacity-50" />
         </div>
-        <select 
-            value={stats.club}
-            onChange={(e) => setStats({...stats, club: e.target.value})}
-            className="w-full bg-zinc-800 border-none text-white text-lg font-medium rounded focus:ring-1 focus:ring-blue-500 py-2 -ml-1 cursor-pointer"
-        >
-            {clubs.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
       </Card>
+
+       {/* Total Mileage - Moved Up */}
+      <h3 className="text-lg font-semibold text-white mt-4 mb-4">Общий километраж</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="hover:bg-zinc-800/50 transition-colors">
+          <StatBox label="Сегодня" value={stats.distance.day} unit="км" />
+        </Card>
+        <Card className="hover:bg-zinc-800/50 transition-colors">
+          <StatBox label="Неделя" value={stats.distance.week} unit="км" trend="+12%" />
+        </Card>
+        <Card className="hover:bg-zinc-800/50 transition-colors">
+          <StatBox label="Месяц" value={stats.distance.month} unit="км" />
+        </Card>
+        <Card className="hover:bg-zinc-800/50 transition-colors">
+          <StatBox label="Год" value={stats.distance.year} unit="км" />
+        </Card>
+      </div>
 
       {/* Records Grid */}
       <h3 className="text-lg font-semibold text-white mt-8 mb-2 flex items-center gap-2">
@@ -231,28 +241,214 @@ const ProfileView = () => {
           </div>
         </Card>
       </div>
-
-      <h3 className="text-lg font-semibold text-white mt-8 mb-4">Общий километраж</h3>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="hover:bg-zinc-800/50 transition-colors">
-          <StatBox label="Сегодня" value={stats.distance.day} unit="км" />
-        </Card>
-        <Card className="hover:bg-zinc-800/50 transition-colors">
-          <StatBox label="Неделя" value={stats.distance.week} unit="км" trend="+12%" />
-        </Card>
-        <Card className="hover:bg-zinc-800/50 transition-colors">
-          <StatBox label="Месяц" value={stats.distance.month} unit="км" />
-        </Card>
-        <Card className="hover:bg-zinc-800/50 transition-colors">
-          <StatBox label="Год" value={stats.distance.year} unit="км" />
-        </Card>
-      </div>
     </div>
   );
 };
 
+const ClubView = ({ currentClub, onJoin }: { currentClub: string, onJoin: (name: string) => void }) => {
+    const [searchTerm, setSearchTerm] = useState("");
+    
+    const clubs: Club[] = [
+        { id: "1", name: "I Love Running", desc: "Крупнейшая школа правильного бега. Филиалы в Алматы и Астане.", city: "Алматы / Астана", members: 1240, color: "bg-red-500" },
+        { id: "2", name: "Astana Runners", desc: "Сообщество любителей бега столицы. Совместные пробежки в триатлон парке.", city: "Астана", members: 850, color: "bg-blue-500" },
+        { id: "3", name: "Almaty Marathon Club", desc: "Официальный клуб Алматы Марафона. Подготовка к главным стартам.", city: "Алматы", members: 2100, color: "bg-green-500" },
+        { id: "4", name: "Extremal Athletics", desc: "Клуб любителей трейла и скайраннинга. Горы и хардкор.", city: "Алматы", members: 320, color: "bg-orange-500" },
+        { id: "5", name: "Nomad Running", desc: "Кочевой дух. Забеги в уникальных локациях степи.", city: "KZ", members: 150, color: "bg-yellow-600" },
+        { id: "6", name: "Raramuri Club", desc: "Философия естественного бега и ультра-дистанций.", city: "Алматы", members: 90, color: "bg-purple-500" },
+    ];
+
+    const filteredClubs = clubs.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const handleCreateClub = () => {
+        const name = prompt("Введите название вашего нового клуба:");
+        if (name) onJoin(name);
+    };
+
+    return (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <div className="flex items-center justify-between mb-6">
+                <div>
+                <h2 className="text-3xl font-bold text-white tracking-tight">Беговые Клубы</h2>
+                <p className="text-zinc-400">Присоединяйся к сообществу.</p>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                <UserGroupIcon className="w-6 h-6" />
+                </div>
+            </div>
+
+            {/* Search and Create */}
+            <div className="flex items-center gap-2">
+                <div className="relative flex-1 group">
+                    <MagnifyingGlassIcon className="absolute left-3 top-3.5 w-5 h-5 text-zinc-500 group-focus-within:text-indigo-400 transition-colors" />
+                    <input 
+                        type="text" 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Поиск клуба..."
+                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-colors"
+                    />
+                </div>
+                <button 
+                    onClick={handleCreateClub}
+                    className="p-3 bg-zinc-900 border border-zinc-800 hover:border-zinc-600 text-zinc-400 hover:text-white rounded-xl transition-all"
+                    title="Создать клуб"
+                >
+                    <PlusCircleIcon className="w-6 h-6" />
+                </button>
+            </div>
+
+            <h3 className="text-lg font-semibold text-white mt-4">Клубы</h3>
+            
+            <div className="grid gap-4">
+                {filteredClubs.length > 0 ? (
+                    filteredClubs.map(club => (
+                        <div key={club.id} className="group bg-zinc-900/50 border border-zinc-800 hover:border-zinc-600 rounded-xl p-5 transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div className="flex items-start gap-4">
+                                <div className={`w-12 h-12 rounded-full ${club.color} flex items-center justify-center text-white font-bold text-lg shrink-0`}>
+                                    {club.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <h4 className="text-lg font-bold text-white flex items-center gap-2">
+                                        {club.name}
+                                        {currentClub === club.name && <CheckBadgeIcon className="w-5 h-5 text-emerald-500" />}
+                                    </h4>
+                                    <p className="text-sm text-zinc-400 line-clamp-2 max-w-md">{club.desc}</p>
+                                    <div className="flex items-center gap-4 mt-2 text-xs text-zinc-500">
+                                        <span className="flex items-center gap-1"><MapPinIcon className="w-3 h-3" /> {club.city}</span>
+                                        <span className="flex items-center gap-1"><UserGroupIcon className="w-3 h-3" /> {club.members} уч.</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => onJoin(club.name)}
+                                disabled={currentClub === club.name}
+                                className={`w-full md:w-auto px-4 py-2 rounded-lg text-sm font-medium transition-colors ${currentClub === club.name ? 'bg-zinc-800 text-zinc-500 cursor-default' : 'bg-white text-black hover:bg-zinc-200'}`}
+                            >
+                                {currentClub === club.name ? 'Вы состоите' : 'Вступить'}
+                            </button>
+                        </div>
+                    ))
+                ) : (
+                    <div className="text-center py-12 bg-zinc-900/30 rounded-xl border border-zinc-800/50 border-dashed">
+                        <UserGroupIcon className="w-12 h-12 text-zinc-600 mx-auto mb-3" />
+                        <h3 className="text-zinc-300 font-medium mb-1">Клуб не найден</h3>
+                        <p className="text-zinc-500 text-sm mb-4">Попробуйте другой запрос или создайте свое сообщество.</p>
+                        <button 
+                            onClick={handleCreateClub}
+                            className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg transition-colors"
+                        >
+                            Создать "{searchTerm}"
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+const ChatView = ({ clubName }: { clubName: string }) => {
+    const [message, setMessage] = useState("");
+    const [messages, setMessages] = useState<Message[]>([
+        { id: 1, user: "Ерлан", role: "Coach", text: "Всем привет! Завтра длительная в 8:00 на терренкуре.", time: "19:30", isMe: false, avatarColor: "bg-blue-500" },
+        { id: 2, user: "Алина", text: "Сколько планируем бежать?", time: "19:32", isMe: false, avatarColor: "bg-pink-500" },
+        { id: 3, user: "Вы", text: "Я буду. Планирую 15км по 5:30.", time: "19:35", isMe: true },
+        { id: 4, user: "Ерлан", role: "Coach", text: "Отлично! Бери изотоник.", time: "19:36", isMe: false, avatarColor: "bg-blue-500" },
+        { id: 5, user: "Тимур", text: "Кто-нибудь едет на марафон в Ташкент?", time: "20:10", isMe: false, avatarColor: "bg-green-500" },
+    ]);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    const handleSend = () => {
+        if (!message.trim()) return;
+        const newMsg: Message = {
+            id: Date.now(),
+            user: "Вы",
+            text: message,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isMe: true
+        };
+        setMessages([...messages, newMsg]);
+        setMessage("");
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    }
+
+    return (
+        <div className="flex flex-col h-[calc(100vh-140px)] md:h-[calc(100vh-80px)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <div className="flex items-center justify-between mb-4 shrink-0">
+                <div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Чат Клуба</h2>
+                    <p className="text-zinc-400 text-sm">{clubName}</p>
+                </div>
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                    <ChatBubbleLeftRightIcon className="w-5 h-5 md:w-6 md:h-6" />
+                </div>
+            </div>
+
+            <div className="flex-1 bg-zinc-900/30 backdrop-blur-sm border border-zinc-800 rounded-2xl overflow-hidden flex flex-col">
+                {/* Messages Area */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {messages.map((msg) => (
+                        <div key={msg.id} className={`flex ${msg.isMe ? 'justify-end' : 'justify-start'}`}>
+                            {!msg.isMe && (
+                                <div className={`w-8 h-8 rounded-full ${msg.avatarColor} flex items-center justify-center text-xs font-bold text-white mr-2 shrink-0`}>
+                                    {msg.user.charAt(0)}
+                                </div>
+                            )}
+                            <div className={`max-w-[75%] rounded-2xl px-4 py-2 ${msg.isMe ? 'bg-emerald-600 text-white rounded-br-none' : 'bg-zinc-800 text-zinc-200 rounded-bl-none'}`}>
+                                {!msg.isMe && (
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-xs font-bold text-zinc-400">{msg.user}</span>
+                                        {msg.role && <span className="text-[9px] bg-blue-500/20 text-blue-300 px-1.5 rounded uppercase tracking-wider">{msg.role}</span>}
+                                    </div>
+                                )}
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                <div className={`text-[10px] mt-1 text-right ${msg.isMe ? 'text-emerald-200' : 'text-zinc-500'}`}>
+                                    {msg.time}
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    <div ref={messagesEndRef} />
+                </div>
+
+                {/* Input Area */}
+                <div className="p-3 bg-zinc-900 border-t border-zinc-800 flex gap-2">
+                    <input 
+                        type="text" 
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Написать сообщение..."
+                        className="flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500 transition-colors text-sm"
+                    />
+                    <button 
+                        onClick={handleSend}
+                        disabled={!message.trim()}
+                        className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-white p-2.5 rounded-xl transition-colors flex items-center justify-center"
+                    >
+                        <PaperAirplaneIcon className="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const LeaderboardView = () => {
-  const [filter, setFilter] = useState<'all' | 'club' | 'challenge'>('all');
+  const [filter, setFilter] = useState<'all' | 'club'>('all');
 
   const participants = [
     { rank: 1, name: "Саша М.", club: "Astana Runners", distance: "42.2 км", time: "3:15:20", status: "Finished", type: 'all' },
@@ -260,8 +456,6 @@ const LeaderboardView = () => {
     { rank: 3, name: "Вы", club: "I Love Running", distance: "35.0 км", time: "2:45:00", status: "Running", active: true, type: 'all' },
     { rank: 1, name: "Вы", club: "I Love Running", distance: "128.4 км", time: "-", status: "Month Leader", active: true, type: 'club' },
     { rank: 2, name: "Марина К.", club: "I Love Running", distance: "115.0 км", time: "-", status: "Chaser", type: 'club' },
-    { rank: 1, name: "Олег П.", club: "Extremal", distance: "200.0 км", time: "-", status: "Ultra Beast", type: 'challenge' },
-    { rank: 4, name: "Вы", club: "I Love Running", distance: "128.4 км", time: "-", status: "Challenger", active: true, type: 'challenge' },
   ];
 
   const filteredList = participants.filter(p => p.type === 'all' || p.type === filter).filter(p => filter === 'all' ? p.type === 'all' : true).sort((a,b) => a.rank - b.rank);
@@ -291,12 +485,6 @@ const LeaderboardView = () => {
             className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-lg transition-all ${filter === 'club' ? 'bg-blue-600 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
         >
             Клубный
-        </button>
-        <button 
-            onClick={() => setFilter('challenge')}
-            className={`flex-1 py-2 text-xs md:text-sm font-medium rounded-lg transition-all ${filter === 'challenge' ? 'bg-orange-600 text-white shadow' : 'text-zinc-500 hover:text-zinc-300'}`}
-        >
-            Челленджи
         </button>
       </div>
 
@@ -513,6 +701,16 @@ const CalculatorView = () => {
   );
 };
 
+const AnimatedExerciseIcon = ({ type }: { type: string }) => {
+    // Simple visualization using CSS only (no external assets)
+    return (
+        <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center relative overflow-hidden border border-zinc-700/50 group-hover:border-emerald-500/50 transition-colors">
+            <div className={`w-4 h-4 bg-zinc-400 rounded-sm ${type === 'jump' ? 'group-hover:animate-bounce' : type === 'run' ? 'group-hover:animate-pulse' : 'group-hover:animate-spin'}`}></div>
+            <PlayCircleIcon className="w-6 h-6 text-white absolute opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+    )
+}
+
 const PlanView = () => {
   const [tab, setTab] = useState<'ai' | 'gpp' | 'drills'>('ai');
   const [generatedPlan, setGeneratedPlan] = useState<string | null>(null);
@@ -528,18 +726,23 @@ const PlanView = () => {
   };
 
   const drills = [
-      { name: "Бег с высоким подниманием бедра", desc: "Корпус прямой, высокая частота, акцент на подъем." },
-      { name: "Захлест голени", desc: "Пятки касаются ягодиц, колени смотрят вниз." },
-      { name: "Многоскоки (Олений бег)", desc: "Мощное отталкивание и фаза полета." },
-      { name: "Семенящий бег", desc: "Мелкие шаги с расслабленной стопой и высокой частотой." }
+      { name: "Бег с высоким бедром", desc: "Корпус прямой, высокая частота, акцент на подъем.", type: "jump" },
+      { name: "Захлест голени", desc: "Пятки касаются ягодиц, колени смотрят строго вниз.", type: "run" },
+      { name: "Многоскоки (Олений бег)", desc: "Мощное отталкивание и фаза полета. Тянемся вперед.", type: "jump" },
+      { name: "Семенящий бег", desc: "Мелкие шаги с расслабленной стопой и высокой частотой.", type: "run" },
+      { name: "Выпады в движении", desc: "Широкий шаг, колено сзади почти касается земли.", type: "slow" },
+      { name: "Бег на прямых ногах", desc: "Приземление на переднюю часть стопы, ноги 'ножницы'.", type: "run" }
   ];
 
   const gpp = [
-      { name: "Планка", sets: "3 x 45 сек", desc: "Укрепление кора." },
-      { name: "Выпады", sets: "3 x 15 (на ногу)", desc: "Сила квадрицепсов и ягодиц." },
-      { name: "Подъемы на носки", sets: "3 x 20", desc: "Укрепление икр и ахилла." },
-      { name: "Берпи", sets: "3 x 12", desc: "Общая выносливость и взрывная сила." },
-      { name: "Русский твист", sets: "3 x 30", desc: "Косые мышцы пресса." }
+      { name: "Планка", sets: "3 x 45 сек", desc: "Укрепление кора. Спина ровная, таз не проваливаем.", type: "slow" },
+      { name: "Боковая планка", sets: "3 x 30 сек", desc: "Косые мышцы. Держим линию тела.", type: "slow" },
+      { name: "Приседания", sets: "3 x 20", desc: "Базовая сила ног. Колени не выходят за носки.", type: "slow" },
+      { name: "Выпады назад", sets: "3 x 15", desc: "Акцент на ягодицы. Корпус держим ровно.", type: "slow" },
+      { name: "Подъемы на носки", sets: "3 x 20", desc: "Укрепление икр и ахилла. Делать плавно.", type: "slow" },
+      { name: "Берпи", sets: "3 x 12", desc: "Общая выносливость и взрывная сила.", type: "jump" },
+      { name: "Ягодичный мостик", sets: "3 x 20", desc: "Задняя поверхность бедра.", type: "slow" },
+      { name: "Отжимания", sets: "3 x 15", desc: "Плечевой пояс и грудь.", type: "slow" },
   ];
 
   return (
@@ -640,12 +843,15 @@ const PlanView = () => {
       )}
 
       {tab === 'gpp' && (
-          <div className="grid gap-3">
+          <div className="grid grid-cols-1 gap-3">
               {gpp.map((ex, i) => (
-                  <div key={i} className="bg-zinc-800/40 p-4 rounded-xl border border-zinc-700/50 flex justify-between items-center">
-                      <div>
-                          <div className="font-semibold text-white">{ex.name}</div>
-                          <div className="text-xs text-zinc-400">{ex.desc}</div>
+                  <div key={i} className="group bg-zinc-800/40 p-4 rounded-xl border border-zinc-700/50 hover:bg-zinc-800 transition-colors flex items-center justify-between cursor-pointer">
+                      <div className="flex items-center gap-4">
+                          <AnimatedExerciseIcon type={ex.type} />
+                          <div>
+                            <div className="font-semibold text-white group-hover:text-emerald-400 transition-colors">{ex.name}</div>
+                            <div className="text-xs text-zinc-400">{ex.desc}</div>
+                          </div>
                       </div>
                       <div className="bg-zinc-900 px-3 py-1 rounded text-emerald-400 font-mono text-sm border border-zinc-700">
                           {ex.sets}
@@ -658,9 +864,12 @@ const PlanView = () => {
       {tab === 'drills' && (
           <div className="grid gap-3">
               {drills.map((drill, i) => (
-                  <div key={i} className="bg-zinc-800/40 p-4 rounded-xl border border-zinc-700/50">
-                      <div className="font-semibold text-white mb-1">{drill.name}</div>
-                      <div className="text-sm text-zinc-400 leading-snug">{drill.desc}</div>
+                  <div key={i} className="group bg-zinc-800/40 p-4 rounded-xl border border-zinc-700/50 hover:bg-zinc-800 transition-colors flex items-center gap-4 cursor-pointer">
+                      <AnimatedExerciseIcon type={drill.type} />
+                      <div>
+                        <div className="font-semibold text-white mb-1 group-hover:text-blue-400 transition-colors">{drill.name}</div>
+                        <div className="text-sm text-zinc-400 leading-snug">{drill.desc}</div>
+                      </div>
                   </div>
               ))}
               <div className="p-4 bg-blue-900/10 border border-blue-900/30 rounded-xl text-xs text-blue-200 mt-4">
@@ -674,13 +883,24 @@ const PlanView = () => {
 };
 
 const RacesView = () => {
+  const [typeFilter, setTypeFilter] = useState<'all' | 'road' | 'trail' | 'mountain'>('all');
+
   const races = [
-    { id: 1, title: "Алматы Марафон", date: "29 Сентября 2024", loc: "Алматы", dist: "10k, 21k, 42k", image: "bg-gradient-to-br from-green-500 to-emerald-700" },
-    { id: 2, title: "Astana Marathon", date: "08 Сентября 2024", loc: "Астана", dist: "10k, 42k", image: "bg-gradient-to-br from-blue-400 to-blue-600" },
-    { id: 3, title: "Tengri Ultra", date: "Май 2025", loc: "Или, Алматинская обл.", dist: "15k, 35k, 70k", image: "bg-gradient-to-br from-orange-500 to-red-600" },
-    { id: 4, title: "Irbis Race", date: "Август 2025", loc: "Заилийский Алатау", dist: "21k, 42k, Skyrace", image: "bg-gradient-to-br from-zinc-600 to-zinc-800" },
-    { id: 5, title: "Turkistan Marathon", date: "Октябрь 2024", loc: "Туркестан", dist: "10k, 21k, 42k", image: "bg-gradient-to-br from-cyan-500 to-blue-500" },
+    { id: 1, title: "Алматы Марафон", date: "29 Сентября 2024", loc: "Алматы", dist: "10k, 21k, 42k", image: "bg-gradient-to-br from-green-500 to-emerald-700", type: 'road' },
+    { id: 2, title: "Astana Marathon", date: "08 Сентября 2024", loc: "Астана", dist: "10k, 42k", image: "bg-gradient-to-br from-blue-400 to-blue-600", type: 'road' },
+    { id: 3, title: "Tengri Ultra", date: "Май 2025", loc: "Или, Алматинская обл.", dist: "15k, 35k, 70k", image: "bg-gradient-to-br from-orange-500 to-red-600", type: 'trail' },
+    { id: 4, title: "Irbis Race", date: "Август 2025", loc: "Заилийский Алатау", dist: "21k, 42k, Skyrace", image: "bg-gradient-to-br from-zinc-600 to-zinc-800", type: 'mountain' },
+    { id: 5, title: "Turkistan Marathon", date: "Октябрь 2024", loc: "Туркестан", dist: "10k, 21k, 42k", image: "bg-gradient-to-br from-cyan-500 to-blue-500", type: 'road' },
+    { id: 6, title: "Almaty Half Marathon", date: "Апрель 2025", loc: "Алматы", dist: "10k, 21k", image: "bg-gradient-to-br from-green-400 to-teal-500", type: 'road' },
+    { id: 7, title: "Winter Run", date: "Февраль 2025", loc: "Алматы", dist: "10k", image: "bg-gradient-to-br from-sky-300 to-blue-400", type: 'road' },
+    { id: 8, title: "City Run", date: "Июнь 2025", loc: "Алматы", dist: "5k, 10k", image: "bg-gradient-to-br from-yellow-400 to-orange-500", type: 'road' },
+    { id: 9, title: "Tau Jarys", date: "Июнь 2025", loc: "Шымбулак", dist: "12k, 25k", image: "bg-gradient-to-br from-stone-500 to-stone-700", type: 'mountain' },
+    { id: 10, title: "Amangeldy Race", date: "Октябрь 2025", loc: "Пик Амангельды", dist: "Vertical KM", image: "bg-gradient-to-br from-gray-600 to-black", type: 'mountain' },
+    { id: 11, title: "Race Nation", date: "Май 2025", loc: "Алматы", dist: "5k, 10k + Obstacles", image: "bg-gradient-to-br from-red-600 to-red-800", type: 'trail' },
+    { id: 12, title: "Burabay Trail", date: "Июль 2025", loc: "Боровое", dist: "10k, 21k", image: "bg-gradient-to-br from-emerald-600 to-green-800", type: 'trail' },
   ];
+
+  const filteredRaces = races.filter(r => typeFilter === 'all' || r.type === typeFilter);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -694,8 +914,23 @@ const RacesView = () => {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="flex items-center justify-end mb-4 bg-zinc-900/50 p-2 rounded-lg border border-zinc-800">
+           <FunnelIcon className="w-5 h-5 text-zinc-500 mr-2" />
+           <select 
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value as any)}
+                className="bg-zinc-800 text-sm text-white border-none rounded px-3 py-1 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+            >
+                <option value="all">Все типы</option>
+                <option value="road">Асфальт / Шоссе</option>
+                <option value="trail">Трейл / Пересеченка</option>
+                <option value="mountain">Горный / Skyrunning</option>
+           </select>
+      </div>
+
       <div className="grid gap-4">
-        {races.map(item => (
+        {filteredRaces.map(item => (
           <Card key={item.id} className="group hover:bg-zinc-800/80 transition-all cursor-pointer relative overflow-hidden">
              {/* Decorative colored bar */}
              <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${item.image}`}></div>
@@ -715,17 +950,23 @@ const RacesView = () => {
                     </div>
                 </div>
                 <div className="text-right">
-                    <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">Дистанции</div>
+                    <div className="mb-2">
+                        {item.type === 'road' && <span className="text-[10px] font-bold bg-blue-900/30 text-blue-400 px-2 py-0.5 rounded border border-blue-900/50">ШОССЕ</span>}
+                        {item.type === 'trail' && <span className="text-[10px] font-bold bg-orange-900/30 text-orange-400 px-2 py-0.5 rounded border border-orange-900/50">ТРЕЙЛ</span>}
+                        {item.type === 'mountain' && <span className="text-[10px] font-bold bg-zinc-700/50 text-zinc-300 px-2 py-0.5 rounded border border-zinc-600">ГОРЫ</span>}
+                    </div>
                     <div className="font-mono text-emerald-400 bg-emerald-900/20 px-2 py-1 rounded inline-block text-sm border border-emerald-900/50">
                         {item.dist}
                     </div>
-                    <button className="mt-4 block w-full text-xs bg-white text-black font-bold py-2 px-4 rounded hover:bg-zinc-200 transition-colors">
-                        Регистрация
-                    </button>
                 </div>
              </div>
           </Card>
         ))}
+        {filteredRaces.length === 0 && (
+            <div className="text-center text-zinc-500 py-10">
+                Забегов такого типа пока нет в календаре.
+            </div>
+        )}
       </div>
     </div>
   );
@@ -733,6 +974,30 @@ const RacesView = () => {
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<View>('profile');
+  const [userStats, setUserStats] = useState<UserStats>({
+    height: 178,
+    weight: 72,
+    club: "I Love Running",
+    stravaConnected: true,
+    distance: {
+      year: 1240.5,
+      month: 128.4,
+      week: 32.2,
+      day: 5.0,
+    },
+    records: {
+      k5: "22:15",
+      k10: "48:30",
+      k21: "1:45:10",
+      k42: "3:55:00",
+      maxDistance: 42.2
+    }
+  });
+
+  const handleJoinClub = (newClub: string) => {
+      setUserStats({...userStats, club: newClub});
+      alert(`Вы успешно вступили в клуб: ${newClub}`);
+  };
 
   return (
     <div className="bg-zinc-950 min-h-screen text-zinc-50 font-sans selection:bg-emerald-500/30 flex overflow-hidden">
@@ -752,6 +1017,8 @@ const App: React.FC = () => {
             { id: 'stats', label: 'Рейтинг', icon: ChartBarIcon },
             { id: 'calculator', label: 'Калькулятор', icon: CalculatorIcon },
             { id: 'plan', label: 'Тренировки', icon: CalendarDaysIcon },
+            { id: 'club', label: 'Клуб', icon: UserGroupIcon },
+            { id: 'chat', label: 'Чат Клуба', icon: ChatBubbleLeftRightIcon },
             { id: 'races', label: 'Забеги', icon: FlagIcon },
           ].map((item) => (
              <button
@@ -771,7 +1038,7 @@ const App: React.FC = () => {
         </nav>
 
         <div className="text-xs text-zinc-600 font-mono">
-            v2.1.0 KZ Edition
+            v2.3.0 KZ Edition
         </div>
       </aside>
 
@@ -785,7 +1052,9 @@ const App: React.FC = () => {
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 pb-24 md:p-12 md:pb-12 max-w-5xl mx-auto w-full no-scrollbar">
-            {activeTab === 'profile' && <ProfileView />}
+            {activeTab === 'profile' && <ProfileView stats={userStats} setStats={setUserStats} />}
+            {activeTab === 'club' && <ClubView currentClub={userStats.club} onJoin={handleJoinClub} />}
+            {activeTab === 'chat' && <ChatView clubName={userStats.club} />}
             {activeTab === 'stats' && <LeaderboardView />}
             {activeTab === 'calculator' && <CalculatorView />}
             {activeTab === 'plan' && <PlanView />}
@@ -799,7 +1068,8 @@ const App: React.FC = () => {
                 <NavButton active={activeTab === 'stats'} onClick={() => setActiveTab('stats')} icon={ChartBarIcon} label="Рейтинг" />
                 <NavButton active={activeTab === 'calculator'} onClick={() => setActiveTab('calculator')} icon={CalculatorIcon} label="Темп" />
                 <NavButton active={activeTab === 'plan'} onClick={() => setActiveTab('plan')} icon={CalendarDaysIcon} label="План" />
-                <NavButton active={activeTab === 'races'} onClick={() => setActiveTab('races')} icon={FlagIcon} label="Забеги" />
+                <NavButton active={activeTab === 'club'} onClick={() => setActiveTab('club')} icon={UserGroupIcon} label="Клуб" />
+                <NavButton active={activeTab === 'chat'} onClick={() => setActiveTab('chat')} icon={ChatBubbleLeftRightIcon} label="Чат" />
             </div>
         </div>
       </main>
